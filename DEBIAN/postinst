@@ -1,0 +1,16 @@
+#!/bin/bash
+systemctl daemon-reload
+echo "Enabling Edged daemon service."
+if [[ -f "/lib/systemd/system/edged.service" ]]; then
+    systemctl enable edged.service
+fi
+if [[ -f "/etc/init.d/edged" ]]; then
+    update-rc.d edged defaults
+fi
+echo "Enabling Supernoded daemon service."
+if [[ -f "/lib/systemd/system/supernoded.service" ]]; then
+    systemctl enable supernoded.service
+fi
+if [[ -f "/etc/init.d/supernoded" ]]; then
+    update-rc.d supernoded defaults
+fi
