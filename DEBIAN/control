@@ -3,6 +3,6 @@ Version: 0.1.0
 Depends: daemon, uml-utilities
 Section: utils
 Priority: optional
-Architecture: amd64
+Architecture: all
 Maintainer: pojntfx <https://github.com/pojntfx/gon2n>
 Description: gon2n is a collection of Go bindings, management daemons and CLIs for the n2n peer-to-peer VPN.

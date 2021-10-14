@@ -4,7 +4,6 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-PIDFile=/var/run/supernoded.pid
 ExecStart=/usr/bin/supernoded -f /etc/gon2n/%i.yaml
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process

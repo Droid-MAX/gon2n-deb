@@ -4,7 +4,6 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-PIDFile=/var/run/edged.pid
 ExecStart=/usr/bin/edged -f /etc/gon2n/edged.yaml
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
