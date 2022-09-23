@@ -1,11 +1,11 @@
 #!/bin/bash
 echo "Shutting down Edged daemon service."
 if [[ -f "/lib/systemd/system/edged.service" ]] || [[ -f "/etc/systemd/system/edged.service" ]]; then
-	systemctl stop edged
+	systemctl stop edged.service
 	systemctl disable edged.service
 fi
 echo "Shutting down Supernoded daemon service."
 if [[ -f "/lib/systemd/system/supernoded.service" ]] || [[ -f "/etc/systemd/system/supernoded.service" ]]; then
-	systemctl stop supernoded
+	systemctl stop supernoded.service
 	systemctl disable supernoded.service
 fi
