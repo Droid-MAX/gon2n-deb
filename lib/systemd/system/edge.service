@@ -1,0 +1,12 @@
+[Unit]
+Description=Edge controller
+Requires=edged.service
+After=edged.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/edgectl apply -f /etc/gon2n/edge.yaml
+
+[Install]
+WantedBy=multi-user.target

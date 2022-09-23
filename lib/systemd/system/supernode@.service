@@ -1,0 +1,12 @@
+[Unit]
+Description=Supernode controller
+Requires=supernoded.service
+After=supernoded.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/supernodectl apply -f /etc/gon2n/%i.yaml
+
+[Install]
+WantedBy=multi-user.target

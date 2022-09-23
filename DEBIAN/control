@@ -1,6 +1,6 @@
 Package: gon2n
 Version: 0.2.1
-Depends: daemon, uml-utilities
+Depends: systemd, uml-utilities
 Section: utils
 Priority: optional
 Architecture: all
