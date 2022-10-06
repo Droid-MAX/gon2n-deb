@@ -1,281 +1,341 @@
-# gon2n
+## Gon2n ##
+
+**gon2n** 是一款基于 **n2n** 并使用go语言进行封装的点对点快速组网的开源软件工具，由超级节点和边缘节点来构建虚拟局域网，其中包含守护进程组件和实例管理程序，以及额外的用于控制点对网访问的转发程序/脚本。
+
+下载链接: [latest](https://github.com/Droid-MAX/gon2n-deb/releases/latest)
+
+### Gon2n for Windows ###
 
-Go bindings, management daemons and CLIs for n2n edges and supernodes.
+### 安装与使用 ###
 
-[![hydrun CI](https://github.com/pojntfx/gon2n/actions/workflows/hydrun.yaml/badge.svg)](https://github.com/pojntfx/gon2n/actions/workflows/hydrun.yaml)
-[![Matrix](https://img.shields.io/matrix/gon2n:matrix.org)](https://matrix.to/#/#gon2n:matrix.org?via=matrix.org)
-[![Binary Downloads](https://img.shields.io/github/downloads/pojntfx/gon2n/total?label=binary%20downloads)](https://github.com/pojntfx/gon2n/releases)
+1. 安装虚拟网卡驱动
 
-## Overview
+    下载并解压驱动包 `tap-windows-9.24.6.zip` 后，运行 `install.bat` ，提示安装成功后按回车退出
+
+2. 开始安装
+
+    下载 `gon2n-0.2.1-setup.exe` 安装程序，并双击执行，根据提示选择安装路径并选择下一步直至安装完成(注意: 该安装包使用第三方工具 `nssm` 来实现进程守护及开机自启，且在安装和卸载的过程中会修改部分注册表项目以实现点对网访问)
+
+3. 管理服务
+
+    按下 `Win + R` 组合键，在运行框中输入 `services.msc` 并回车，找到对应的服务名(Edged为边缘节点进程守护服务，Supernoded为超级节点进程守护服务)，点击 `启动` 选项，启动后将会显示其余的控制选项
+
+4. 管理edge实例(边缘节点)
+
+    - 查看当前正在运行的所有edge边缘节点实例
+
+        在cmd终端命令行窗口中执行 `edgectl get` 或 `edgectl g` 命令，若成功执行将会返回如下内容(没有实例运行时)
+
+        ```
+        ID      COMMUNITY NAME  LOCAL PORT      SUPERNODE HOST:PORT     ENCRYPTION METHOD       DEVICE NAME
+        ```
+
+    - 创建/启动一个edge边缘节点运行实例
+
+        因子命令参数较多，这里可以使用 `edgectl apply -h` 或 `edgectl a -h` 命令，查看帮助参数
 
-`gon2n` is a collection of Go bindings, management daemons and CLIs for the n2n peer-to-peer VPN. n2n is built of two main components:
+        ```
+        Flags:
+          -u, --edge.MTU int                    The MTU to use. (default 1500)
+          -z, --edge.addressMode string         Mode of IP address assignment. "static" is a static assignment, "dhcp" uses the DHCP server at --device-ip (see --dynamic-ip-node). If the edge is running the network's DHCP server, this must be "static". (default "static")
+          -p, --edge.allowP2P                   Whether to allow peer-to-peer connections. If false, all traffic will be routed through the supernode. (default true)
+          -r, --edge.allowRouting               Whether to allow the node to route traffic to other nodes. (default true)
+          -c, --edge.communityName string       The name of the n2n community to join. (default "mynetwork")
+          -f, --edge.configFile string          Configuration file to use.
+          -i, --edge.deviceIP string            IP address to set. Set to "0.0.0.0" if you are using "dhcp" as --address-mode. If the edge is running the network's DHCP server this must be set explicitly; i.e. to "192.168.1.0" if the DHCP server should give out addresses from "192.168.1.10" to "192.168.1.100". (default "192.168.1.1")
+          -x, --edge.deviceMACAddress string    The MAC address to use. Must be unique per edge. (default "DE:AD:BE:EF:01:10")
+          -v, --edge.deviceName string          Name of the TUN/TAP device to create. (default "edge0")
+          -q, --edge.deviceNetmask string       The netmask to use. (default "255.255.255.0")
+          -m, --edge.disableMulticast           Whether to disable multicast.
+          -d, --edge.disablePMTUDiscovery       Whether to disable path MTU discovery.
+          -y, --edge.dynamicIPMode              Whether the IP address is set dynamically (see --address-mode). If the edge is running the network's DHCP server, this must be false.
+          -k, --edge.encryptionKey string       The key to use for encryption. (default "mysecretkey")
+          -e, --edge.encryptionMethod int       Method of encryption to use. 1 is no encryption, 2 is Twofish encryption, 3 is AES-CBC encryption. Twofish encryption is the n2n default, but only due to legacy compatibility reasons; AES-CBC is up to ten times faster. (default 2)
+          -l, --edge.localPort int              The local port to use. 0 uses any available port.
+          -a, --edge.managementPort int         UDP management port. 5644 is the n2n default. (default 5644)
+          -n, --edge.registerInterval int       Interval in seconds for both UDP NAT hole punching and registration of the edge on the supernode. (default 1)
+          -t, --edge.registerTTL int            Interval in seconds for UDP NAT hole punching through the supernode. (default 1)
+          -s, --edge.serverHostPort string      Host:port of the server to use. (default "localhost:10600")
+          -w, --edge.supernodeHostPort string   Host:port of the supernode to connect to. (default "localhost:1234")
+          -o, --edge.typeOfService int          Type of service to use. (default 16)
+          -h, --help                            help for apply
+        ```
+    
+        除了可以逐一指定参数之外还可以使用配置文件来创建边缘节点实例，以下为默认配置
 
-- `edge`s, which are the "VPN clients" that manage the TUN/TAP interfaces on every device that is part of a community (a overlay network)
-- `supernode`s, which are responsible for both keeping track of the `edge`s of a community as well routing traffic to `edge`s which can't communicate to each other with a peer-to-peer connection
+        ```
+        edge:
+          allowP2P: true
+          allowRouting: true
+          communityName: mynetwork
+          disablePMTUDiscovery: false
+          disableMulticast: false
+          dynamicIPMode: false
+          encryptionKey: mysecretkey
+          localPort: 0
+          managementPort: 5644
+          registerInterval: 1
+          registerTTL: 1
+          supernodeHostPort: localhost:1234
+          typeOfService: 16
+          encryptionMethod: 2
+          deviceName: edge0
+          addressMode: static
+          deviceIP: 192.168.1.1
+          deviceNetmask: 255.255.255.0
+          deviceMACAddress: DE:AD:BE:EF:01:10
+          MTU: 1500
+        ```
 
-In a similar way, `gon2n` is built of multiple components. The components are:
+    创建成功后将会提示并返回一个UUID格式的edge边缘节点实例ID，另外需要注意的是在Windows系统中使用时需要将对应网卡设备名的参数改为 `""` ，否则将会出现报错
 
-- `edged`, a n2n edge management daemon with a gRPC interface
-- `supernoded`, a n2n supernode management daemon with a gRPC interface
-- `edgectl`, a CLI for `edged`
-- `supernodectl`, a CLI for `supernoded`
+    - 删除/停止一个edge边缘节点实例
 
-## Installation
+        首先查看当前正在运行的所有edge边缘节点实例以获取 `ID` 号，再使用 `edgectl delete <ID>` 或 `edgectl d <ID>` ，若成功执行将会提示对应ID实例已删除
 
-Static binaries are available on [GitHub releases](https://github.com/pojntfx/gon2n/releases).
+5. 管理supernode实例(超级节点)
 
-On Linux, you can install them like so:
+    - 查看当前正在运行的所有supernode超级节点实例
 
-```shell
-$ curl -L -o /tmp/supernoded "https://github.com/pojntfx/gon2n/releases/latest/download/supernoded.linux-$(uname -m)"
-$ curl -L -o /tmp/edged "https://github.com/pojntfx/gon2n/releases/latest/download/edged.linux-$(uname -m)"
-$ curl -L -o /tmp/supernodectl "https://github.com/pojntfx/gon2n/releases/latest/download/supernodectl.linux-$(uname -m)"
-$ curl -L -o /tmp/edgectl "https://github.com/pojntfx/gon2n/releases/latest/download/edgectl.linux-$(uname -m)"
-$ sudo install /tmp/{supernoded,edged,supernodectl,edgectl} /usr/local/bin
-$ sudo setcap cap_net_admin+ep /usr/local/bin/edged # This allows rootless execution
-```
+        在cmd终端命令行窗口中执行 `supernodectl get` 或 `supernodectl g` 命令，若成功执行将会返回如下内容(没有实例运行时)
 
-On macOS, you can use the following (macOS does not support TAP devices, so only the client CLIs work):
+        ```
+        ID      LISTEN PORT
+        ```
 
-```shell
-$ curl -L -o /tmp/supernodectl "https://github.com/pojntfx/gon2n/releases/latest/download/supernodectl.linux-$(uname -m)"
-$ curl -L -o /tmp/edgectl "https://github.com/pojntfx/gon2n/releases/latest/download/edgectl.linux-$(uname -m)"
-$ sudo install /tmp/{supernodectl,edgectl} /usr/local/bin
-```
-
-On Windows, the following should work (using PowerShell as administrator; Windows does not support TAP devices, so only the client CLIs work):
-
-```shell
-PS> Invoke-WebRequest https://github.com/pojntfx/gon2n/releases/latest/download/supernodectl.windows-x86_64.exe -OutFile \Windows\System32\supernodectl.exe
-PS> Invoke-WebRequest https://github.com/pojntfx/gon2n/releases/latest/download/edgectl.windows-x86_64.exe -OutFile \Windows\System32\edgectl.exe
-```
+    - 创建/启动一个supernode超级节点运行实例
 
-You can find binaries for more operating systems and architectures on [GitHub releases](https://github.com/pojntfx/gon2n/releases).
+        因子命令参数较多，这里可以使用 `supernodectl apply -h` 或 `supernodectl a -h` 命令，查看帮助参数
 
-## Usage
+        ```
+        Flags:
+          -h, --help                              help for apply
+          -f, --supernode.configFile string       Configuration file to use.
+          -l, --supernode.listenPort int          UDP listen port. (default 1234)
+          -m, --supernode.managementPort int      UDP management port. (default 5645)
+          -s, --supernode.serverHostPort string   Host:port of the server to use. (default "localhost:10500")
+        ```
+    
+        除了可以逐一指定参数之外还可以使用配置文件来创建超级节点实例，以下为默认配置
 
-### 1. Setting up the Supernode
+        ```
+        supernode:
+          listenPort: 1234
+          managementPort: 5645
+        ```
 
-First, start the supernode management daemon:
+    创建成功后将会提示并返回一个UUID格式的supernode超级节点实例ID，如需开放外网访问请自行调整防火墙策略
 
-```shell
-$ supernoded -f examples/supernoded.yaml
-{"level":"info","timestamp":"2021-10-24T20:32:21Z","message":"Starting server"}
-```
+    - 删除/停止一个supernode超级节点实例
 
-Now, in a new terminal, create a supernode:
+        首先查看当前正在运行的所有supernode超级节点实例以获取 `ID` 号，再使用 `supernodectl delete <ID>` 或 `supernodectl d <ID>` ，若成功执行将会提示对应ID实例已删除
 
-```shell
-$ supernodectl apply -f examples/supernode.yaml
-supernode "69b92323-9384-46fb-8814-663ea3ff98fe" created
-```
+6. 查看运行日志
 
-You can retrieve the running supernodes with `supernodectl get`:
+    - 日志路径
+    
+        默认日志保存路径为软件安装目录的 `logs` 文件夹中，默认每隔24小时或每增长1MB会自动轮转保存(注意:请勿删除或修改 `logs` 文件夹，否则将会影响正常的日志记录功能)
 
-```shell
-$ supernodectl get
-ID                                      LISTEN PORT
-69b92323-9384-46fb-8814-663ea3ff98fe    1234
-```
+### 点对网配置 ###
 
-### 2. Setting up the Edges
+1. 配置edge点对网访问(被访问端)
 
-In this example, we'll be creating two edges, which will both run on the same host - in a real-world scenario, you probably want to run an edge management daemon per host. First, start the edge management daemon:
+    - 创建edge实例
 
-```shell
-$ edged examples/edged.yaml
-{"level":"info","timestamp":"2021-10-24T20:38:34Z","message":"Starting server"}
-```
+    - 配置网络共享
+    
+        使用管理员身份启动 `cmd` 命令提示符窗口，执行 `ipconfig /all` 查找并确定edge实例所使用的虚拟网卡名称及本地物理网卡名称，然后执行 `netshare "本地物理网卡名称" "edge实例所使用的虚拟网卡名称"`
 
-Now, in a new terminal, create the edges:
+        如需关闭网络共享则需手动关闭，按下 `Win + R` 组合键，在运行框中输入 `ncpa.cpl` 并回车，右键本地的物理网卡，在属性的共享选项卡中取消勾选相关选项
 
-```shell
-$ edgectl apply -f examples/edge-1.yaml
-edge "74125834-6ad7-4c90-8c28-f22edda10dad" created
-$ edgectl apply -f examples/edge-2.yaml
-edge "7f1c60ed-e298-47a1-abe7-cefa61e4d886" created
-```
+2. 配置edge点对网访问(访问端)
 
-You can retrieve the running edges with `edgectl get`:
+    - 创建edge实例
 
-```shell
-$ edgectl get
-ID                                      COMMUNITY NAME  LOCAL PORT      SUPERNODE HOST:PORT ENCRYPTION METHOD       DEVICE NAME
-74125834-6ad7-4c90-8c28-f22edda10dad    mynetwork       0               localhost:1234      2                       edge0
-7f1c60ed-e298-47a1-abe7-cefa61e4d886    mynetwork       0               localhost:1234      2                       edge1
-```
-
-The log of the edge management daemon started earlier also shows the changes:
-
-```shell
-24/Oct/2021 22:41:07 [edge_utils.c:2578] Adding supernode[0] = localhost:1234
-{"level":"info","timestamp":"2021-10-24T20:41:07Z","message":"Starting edge"}
-24/Oct/2021 22:41:07 [edge_utils.c:211] supernode 0 => localhost:1234
-24/Oct/2021 22:41:07 [edge_utils.c:2104] TOS set to 0x10
-24/Oct/2021 22:41:07 [edge_utils.c:727] Successfully joined multicast group 224.0.0.68:1968
-24/Oct/2021 22:41:07 [edge_utils.c:1803] [OK] Edge Peer <<< ================ >>> Super Node
-24/Oct/2021 22:41:12 [edge_utils.c:2578] Adding supernode[0] = localhost:1234
-{"level":"info","timestamp":"2021-10-24T20:41:12Z","message":"Starting edge"}
-24/Oct/2021 22:41:12 [edge_utils.c:211] supernode 0 => localhost:1234
-24/Oct/2021 22:41:12 [edge_utils.c:2104] TOS set to 0x10
-24/Oct/2021 22:41:12 [edge_utils.c:727] Successfully joined multicast group 224.0.0.68:1968
-24/Oct/2021 22:41:12 [edge_utils.c:1756] [P2P] Rx REGISTER from 100.64.154.252:53854
-24/Oct/2021 22:41:12 [edge_utils.c:1756] [P2P] Rx REGISTER from 100.64.154.252:34474
-24/Oct/2021 22:41:12 [edge_utils.c:1756] [P2P] Rx REGISTER from 100.64.154.252:34474
-# ...
-```
-
-If we check with `ip a`, we can also see the created `edge0` and `edge1` interfaces:
+    - 添加路由规则(推荐)
 
-```shell
-$ ip a
-# ...
-553: edge0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UNKNOWN group default qlen 1000
-    link/ether de:ad:be:ef:01:10 brd ff:ff:ff:ff:ff:ff
-    inet 192.168.1.1/24 brd 192.168.1.255 scope global edge0
-       valid_lft forever preferred_lft forever
-    inet6 fe80::dcad:beff:feef:110/64 scope link
-       valid_lft forever preferred_lft forever
-554: edge1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UNKNOWN group default qlen 1000
-    link/ether de:a0:be:ef:01:10 brd ff:ff:ff:ff:ff:ff
-    inet 192.168.1.2/24 brd 192.168.1.255 scope global edge1
-       valid_lft forever preferred_lft forever
-    inet6 fe80::dca0:beff:feef:110/64 scope link
-       valid_lft forever preferred_lft forever
-# ...
-```
+        使用管理员身份启动 `cmd` 命令提示符窗口，执行 `route add "目标网络IP" mask "目标网络掩码" "网关地址"` ，若想添加永久路由规则，附加 `-p` 参数
 
-🚀 **That's it!** We've successfully created a layer 2 overlay network.
+        网关地址为被访问端的IP地址
+    
+    - 删除路由规则
 
-Be sure to check out the [reference](#reference) for more information.
+        使用管理员身份启动 `cmd` 命令提示符窗口，执行 `route delete "目标网络IP" mask "目标网络掩码" "网关地址"`
 
-## Reference
+    - 指定虚拟网卡网关地址为被访问端IP(不推荐)
 
-### Daemons
+        按下 `Win + R` 组合键，在运行框中输入 `ncpa.cpl` 并回车，右键edge实例所使用的虚拟网卡，在属性的IPv4选项中手动指定 `默认网关` 的地址为被访问端的IP地址
 
-There are two daemons, `supernoded` and `edged`; the latter requires `CAP_NET_ADMIN` capabilities to manage the TUN/TAP interfaces.
+### Gon2n for Linux ###
 
-#### `supernoded`
+### 安装与使用 ###
 
-You may also set the flags by setting env variables in the format `SUPERNODED_[FLAG]` (i.e. `SUPERNODED_SUPERNODED_CONFIGFILE=examples/supernoded.yaml`) or by using a [configuration file](examples/supernoded.yaml).
+1. 下载及安装
 
-```bash
-$ supernoded --help
-supernoded is the n2n supernode management daemon.
+    选择并下载合适的系统版本的软件包，例如 `gon2n-0.2.1-x86_64.deb` ，使用 `sudo dpkg -i gon2n-0.2.1-x86_64.deb` 命令进行安装(注意：该软件包依赖 `uml-utilities` 软件包)
 
-Find more information at:
-https://github.com/pojntfx/gon2n
+2. 管理服务
 
-Usage:
-  supernoded [flags]
+    安装完毕后，默认将守护进程服务设为开机自启，也可以手动启动守护进程服务 `sudo systemctl start edged.service` ，超级节点同理 `sudo systemctl start supernoded.service`
 
-Flags:
-  -h, --help                               help for supernoded
-  -f, --supernoded.configFile string       Configuration file to use.
-  -l, --supernoded.listenHostPort string   TCP listen host:port. (default "localhost:1050")
-```
+    重启服务 `sudo systemctl restart edged.service`
 
-#### `edged`
+    停止服务 `sudo systemctl stop edged.service`
 
-You may also set the flags by setting env variables in the format `EDGED_[FLAG]` (i.e. `EDGED_EDGED_CONFIGFILE=examples/edged.yaml`) or by using a [configuration file](examples/edged.yaml).
+    查看运行状态 `sudo systemctl status edged.service`
+    
+    此外控制程序也有对应的 `Oneshot` 类型服务，可以按需手动将控制程序服务设为开机自启 `sudo systemctl enable edge.service` ，控制程序将会在守护进程服务启动或重启后执行一次
 
-```bash
-$ edged --help
-edged is the n2n edge management daemon.
+    禁用开机自启 `sudo systemctl disable edge.service`
 
-Find more information at:
-https://github.com/pojntfx/gon2n
+3. 管理edge实例(边缘节点)
 
-Usage:
-  edged [flags]
+    - 查看当前正在运行的所有edge边缘节点实例
 
-Flags:
-  -f, --edged.configFile string       Configuration file to use.
-  -l, --edged.listenHostPort string   TCP listen host:port. (default "localhost:1060")
-  -h, --help                          help for edged
-```
+        在cmd终端命令行窗口中执行 `edgectl get` 或 `edgectl g` 命令，若成功执行将会返回如下内容(没有实例运行时)
 
-### Client CLIs
+        ```
+        ID      COMMUNITY NAME  LOCAL PORT      SUPERNODE HOST:PORT     ENCRYPTION METHOD       DEVICE NAME
+        ```
 
-There are two client CLIs, `supernodectl` and `edgectl`.
+    - 创建/启动一个edge边缘节点运行实例
 
-#### `supernodectl`
+        因子命令参数较多，这里可以使用 `edgectl apply -h` 或 `edgectl a -h` 命令，查看帮助参数
 
-You may also set the flags by setting env variables in the format `SUPERNODE_[FLAG]` (i.e. `SUPERNODE_SUPERNODE_CONFIGFILE=examples/supernode.yaml`) or by using a [configuration file](examples/supernode.yaml).
+        ```
+        Flags:
+          -u, --edge.MTU int                    The MTU to use. (default 1500)
+          -z, --edge.addressMode string         Mode of IP address assignment. "static" is a static assignment, "dhcp" uses the DHCP server at --device-ip (see --dynamic-ip-node). If the edge is running the network's DHCP server, this must be "static". (default "static")
+          -p, --edge.allowP2P                   Whether to allow peer-to-peer connections. If false, all traffic will be routed through the supernode. (default true)
+          -r, --edge.allowRouting               Whether to allow the node to route traffic to other nodes. (default true)
+          -c, --edge.communityName string       The name of the n2n community to join. (default "mynetwork")
+          -f, --edge.configFile string          Configuration file to use.
+          -i, --edge.deviceIP string            IP address to set. Set to "0.0.0.0" if you are using "dhcp" as --address-mode. If the edge is running the network's DHCP server this must be set explicitly; i.e. to "192.168.1.0" if the DHCP server should give out addresses from "192.168.1.10" to "192.168.1.100". (default "192.168.1.1")
+          -x, --edge.deviceMACAddress string    The MAC address to use. Must be unique per edge. (default "DE:AD:BE:EF:01:10")
+          -v, --edge.deviceName string          Name of the TUN/TAP device to create. (default "edge0")
+          -q, --edge.deviceNetmask string       The netmask to use. (default "255.255.255.0")
+          -m, --edge.disableMulticast           Whether to disable multicast.
+          -d, --edge.disablePMTUDiscovery       Whether to disable path MTU discovery.
+          -y, --edge.dynamicIPMode              Whether the IP address is set dynamically (see --address-mode). If the edge is running the network's DHCP server, this must be false.
+          -k, --edge.encryptionKey string       The key to use for encryption. (default "mysecretkey")
+          -e, --edge.encryptionMethod int       Method of encryption to use. 1 is no encryption, 2 is Twofish encryption, 3 is AES-CBC encryption. Twofish encryption is the n2n default, but only due to legacy compatibility reasons; AES-CBC is up to ten times faster. (default 2)
+          -l, --edge.localPort int              The local port to use. 0 uses any available port.
+          -a, --edge.managementPort int         UDP management port. 5644 is the n2n default. (default 5644)
+          -n, --edge.registerInterval int       Interval in seconds for both UDP NAT hole punching and registration of the edge on the supernode. (default 1)
+          -t, --edge.registerTTL int            Interval in seconds for UDP NAT hole punching through the supernode. (default 1)
+          -s, --edge.serverHostPort string      Host:port of the server to use. (default "localhost:1060")
+          -w, --edge.supernodeHostPort string   Host:port of the supernode to connect to. (default "localhost:1234")
+          -o, --edge.typeOfService int          Type of service to use. (default 16)
+          -h, --help                            help for apply
+        ```
+    
+        除了可以逐一指定参数之外还可以使用配置文件来创建边缘节点实例，以下为默认配置
 
-```bash
-$ supernodectl --help
-supernodectl manages supernoded, the n2n supernode management daemon.
+        ```
+        edge:
+          allowP2P: true
+          allowRouting: true
+          communityName: mynetwork
+          disablePMTUDiscovery: false
+          disableMulticast: false
+          dynamicIPMode: false
+          encryptionKey: mysecretkey
+          localPort: 0
+          managementPort: 5644
+          registerInterval: 1
+          registerTTL: 1
+          supernodeHostPort: localhost:1234
+          typeOfService: 16
+          encryptionMethod: 2
+          deviceName: edge0
+          addressMode: static
+          deviceIP: 192.168.1.1
+          deviceNetmask: 255.255.255.0
+          deviceMACAddress: DE:AD:BE:EF:01:10
+          MTU: 1500
+        ```
 
-Find more information at:
-https://github.com/pojntfx/gon2n
+    创建成功后将会提示并返回一个UUID格式的edge边缘节点实例ID
 
-Usage:
-  supernodectl [command]
+    - 删除/停止一个edge边缘节点实例
 
-Available Commands:
-  apply       Apply a supernode
-  completion  generate the autocompletion script for the specified shell
-  delete      Delete one or more supernode(s)
-  get         Get one or all supernode(s)
-  help        Help about any command
+        首先查看当前正在运行的所有edge边缘节点实例以获取 `ID` 号，再使用 `edgectl delete <ID>` 或 `edgectl d <ID>` ，若成功执行将会提示对应ID实例已删除
 
-Flags:
-  -h, --help   help for supernodectl
+4. 管理supernode实例(超级节点)
 
-Use "supernodectl [command] --help" for more information about a command.
-```
+    - 查看当前正在运行的所有supernode超级节点实例
 
-#### `edgectl`
+        在cmd终端命令行窗口中执行 `supernodectl get` 或 `supernodectl g` 命令，若成功执行将会返回如下内容(没有实例运行时)
 
-You may also set the flags by setting env variables in the format `EDGE_[FLAG]` (i.e. `EDGE_EDGE_CONFIGFILE=examples/edge-1.yaml`) or by using a [configuration file](examples/edge-1.yaml) ([alternative with DHCP instead of static IPs](examples/edge-dhcp.yaml)).
+        ```
+        ID      LISTEN PORT
+        ```
 
-```bash
-$ edgectl --help
-edgectl manages edged, the n2n edge management daemon.
+    - 创建/启动一个supernode超级节点运行实例
 
-Find more information at:
-https://github.com/pojntfx/gon2n
+        因子命令参数较多，这里可以使用 `supernodectl apply -h` 或 `supernodectl a -h` 命令，查看帮助参数
 
-Usage:
-  edgectl [command]
+        ```
+        Flags:
+          -h, --help                              help for apply
+          -f, --supernode.configFile string       Configuration file to use.
+          -l, --supernode.listenPort int          UDP listen port. (default 1234)
+          -m, --supernode.managementPort int      UDP management port. (default 5645)
+          -s, --supernode.serverHostPort string   Host:port of the server to use. (default "localhost:1050")
+        ```
+    
+        除了可以逐一指定参数之外还可以使用配置文件来创建超级节点实例，以下为默认配置
 
-Available Commands:
-  apply       Apply an edge
-  completion  generate the autocompletion script for the specified shell
-  delete      Delete one or more edge(s)
-  get         Get one or all edge(s)
-  help        Help about any command
+        ```
+        supernode:
+          listenPort: 1234
+          managementPort: 5645
+        ```
 
-Flags:
-  -h, --help   help for edgectl
+    创建成功后将会提示并返回一个UUID格式的supernode超级节点实例ID，如需开放外网访问请自行调整防火墙策略
 
-Use "edgectl [command] --help" for more information about a command.
-```
+    - 删除/停止一个supernode超级节点实例
 
-## Acknowledgements
+        首先查看当前正在运行的所有supernode超级节点实例以获取 `ID` 号，再使用 `supernodectl delete <ID>` 或 `supernodectl d <ID>` ，若成功执行将会提示对应ID实例已删除
 
-- This project would not have been possible were it not for [@ntop](https://github.com/ntop)'s [n2n](https://github.com/ntop/n2n) VPN; be sure to check it out too!
-- All the rest of the authors who worked on the dependencies used! Thanks a lot!
+5. 查看运行日志
 
-## Contributing
+    - edged
 
-To contribute, please use the [GitHub flow](https://guides.github.com/introduction/flow/) and follow our [Code of Conduct](./CODE_OF_CONDUCT.md).
+        查看edged守护进程实时日志记录 `journalctl -u edged -f`
 
-To build gon2n locally, run:
+    - supernoded
 
-```shell
-$ git clone https://github.com/pojntfx/gon2n.git
-$ cd gon2n
-$ make depend
-$ make
-$ sudo make run/edged # Or run/supernoded etc.
-```
+        查看supernoded守护进程实时日志记录 `journalctl -u supernoded -f`
 
-Have any questions or need help? Chat with us [on Matrix](https://matrix.to/#/#gon2n:matrix.org?via=matrix.org)!
+### 点对网配置 ###
 
-## License
+1. 配置edge点对网访问(被访问端)
 
-gon2n (c) 2021 Felix Pojtinger and contributors
+    - 创建edge实例
 
-SPDX-License-Identifier: AGPL-3.0
+    - 配置流量转发
+    
+        使用 `ifconfig` 命令查找并确定edge实例所使用的虚拟网卡名称及本地物理网卡名称，然后执行 `forward.sh enable "本地物理网卡名称" "edge实例所使用的虚拟网卡名称"`
+
+        如需禁用流量转发可以执行 `forward.sh disable "本地物理网卡名称" "edge实例所使用的虚拟网卡名称"` 命令
+
+2. 配置edge点对网访问(访问端)
+
+    - 创建edge实例
+
+    - 添加路由规则(推荐)
+
+        执行 `sudo route add -net "目标网络IP" netmask "目标网络掩码" gw "网关地址"`
+
+        网关地址为被访问端的IP地址
+    
+    - 删除路由规则
+
+        执行 `sudo route del -net "目标网络IP" netmask "目标网络掩码"`
+
+    - 修改默认网关(不推荐)
+
+        执行 `sudo route add default gw "网关地址"`
+
+        网关地址为被访问端的IP地址
